@@ -1,5 +1,3 @@
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 from telegram import (
     Update,
     ReplyKeyboardMarkup,
@@ -15,27 +13,14 @@ from telegram.ext import (
     ConversationHandler,
 )
 
-# Token va guruh ID
-BOT_TOKEN = "7514443189:AAHXwgj871d9UWzPYgFRg2K7BDgQqAu9-zA"  # O'zingizning tokeningizni kiriting
+# Bot tokeni va guruh ID
+BOT_TOKEN = "7514443189:AAHXwgj871d9UWzPYgFRg2K7BDgQqAu9-zA"  # Tokeningizni kiriting
 GROUP_CHAT_ID = -4648326817  # Guruh ID
 
 # Holatlar
 NAME, AGE, COURSE, FACULTY, MENU, ASK_QUESTION = range(6)
 
-# Google Sheets API orqali ulanish
-def connect_to_google_sheets():
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name("path_to_your_credentials.json", scope)
-    client = gspread.authorize(creds)
-    return client
-
-# Savolni Google Sheetsga saqlash
-def save_question_to_sheets(name, age, course, faculty, question):
-    client = connect_to_google_sheets()
-    sheet = client.open("Savollar").sheet1  # "Savollar" - siz yaratgan Google Sheetning nomi
-    sheet.append_row([name, age, course, faculty, question])
-
-# Start komandasi
+# /start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Ismingizni bilsam bo'ladimi?")
     return NAME
@@ -72,23 +57,13 @@ async def get_faculty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
 # Savolni qabul qilish va guruhga yuborish
 async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    user = update.effective_user
     await update.message.reply_text("Savolingizni yozing:", reply_markup=ReplyKeyboardRemove())
     return ASK_QUESTION
 
-# Savolni guruhga jo'natish va saqlash
+# Savolni guruhga jo'natish
 async def send_question_to_group(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     question = update.message.text
-
-    # Google Sheetsga saqlash
-    save_question_to_sheets(
-        context.user_data["name"],
-        context.user_data["age"],
-        context.user_data["course"],
-        context.user_data["faculty"],
-        question
-    )
 
     # Guruhga foydalanuvchi ma'lumotlari bilan savolni yuborish
     forwarded_message = await context.bot.send_message(
@@ -102,7 +77,7 @@ async def send_question_to_group(update: Update, context: ContextTypes.DEFAULT_T
         parse_mode="Markdown",
     )
 
-    # Xabar ID va foydalanuvchi ID saqlash
+    # Xabar ID va foydalanuvchi IDni saqlash
     context.bot_data[forwarded_message.message_id] = user.id
 
     # Foydalanuvchiga tasdiq yuborish
