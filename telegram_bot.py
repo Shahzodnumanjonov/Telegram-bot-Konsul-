@@ -68,22 +68,22 @@ async def reply_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await update.message.reply_text("Foydalanuvchiga reply qilib javob bering.")
 
 async def ask_for_cv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("Iltimos, CVingizni PDF formatda yuboring.\n(Format: PDF)")
+    await update.message.reply_text("Iltimos, CVingizni yuboring.")
     return CV
 
 async def handle_cv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.document:
         file = update.message.document
-        if file.mime_type == "application/pdf":
-            await context.bot.send_document(
-                chat_id=GROUP_CHAT_ID,
-                document=file.file_id,
-                caption=f"Yangi CV:\nFoydalanuvchi: {context.user_data['name']} (@{update.effective_user.username})"
-            )
-            await update.message.reply_text("CV guruhga yuborildi!")
-            return MENU
-        else:
-            await update.message.reply_text("Iltimos, faqat PDF formatidagi faylni yuboring.")
+        # Handle any document, not just PDFs
+        await context.bot.send_document(
+            chat_id=GROUP_CHAT_ID,
+            document=file.file_id,
+            caption=f"Yangi CV:\nFoydalanuvchi: {context.user_data['name']} (@{update.effective_user.username})"
+        )
+        await update.message.reply_text("CV guruhga yuborildi!")
+        return MENU
+    else:
+        await update.message.reply_text("Iltimos, faqat hujjat yuboring.")
     return CV
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -102,7 +102,7 @@ async def main():
             FACULTY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_faculty)],
             MENU: [MessageHandler(filters.Regex("^(Savol va takliflar yo'llash)$"), ask_question)],
             ASK_QUESTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, send_question_to_group)],
-            CV: [MessageHandler(filters.MIME_TYPE("application/pdf"), handle_cv)],  # Correct MIME type filter
+            CV: [MessageHandler(filters.DOCUMENT, handle_cv)],  # Accept any document type
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
@@ -111,6 +111,10 @@ async def main():
     application.add_handler(MessageHandler(filters.ALL & filters.REPLY, reply_to_user))
 
     await application.run_polling(drop_pending_updates=True)
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
 
 if __name__ == "__main__":
     import asyncio
