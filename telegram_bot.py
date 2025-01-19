@@ -17,7 +17,7 @@ BOT_TOKEN = "7514443189:AAHXwgj871d9UWzPYgFRg2K7BDgQqAu9-zA"  # Tokeningizni kir
 GROUP_CHAT_ID = -4648326817  # Guruh ID
 
 # Holatlar
-NAME, AGE, COURSE, FACULTY, MENU, ASK_QUESTION = range(6)
+NAME, PHONE, AGE, COURSE, FACULTY, MENU, ASK_QUESTION, SEND_CV = range(8)
 
 # /start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -27,6 +27,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 # Ismni qabul qilish
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["name"] = update.message.text
+    keyboard = [
+        [KeyboardButton("📱 Share my number", request_contact=True)],
+    ]
+    await update.message.reply_text(
+        "Iltimos, telefon raqamingizni ulashing.",
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
+    )
+    return PHONE
+
+# Telefon raqamini qabul qilish
+async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data["phone"] = update.message.contact.phone_number if update.message.contact else update.message.text
     await update.message.reply_text("Yoshingiz nechida?")
     return AGE
 
@@ -71,7 +83,8 @@ async def send_question_to_group(update: Update, context: ContextTypes.DEFAULT_T
              f"*Foydalanuvchi:* {context.user_data['name']} (@{user.username})\n"
              f"*Yoshi:* {context.user_data['age']}\n"
              f"*Kurs:* {context.user_data['course']}\n"
-             f"*Fakulteti:* {context.user_data['faculty']}\n\n"
+             f"*Fakulteti:* {context.user_data['faculty']}\n"
+             f"*Telefon:* {context.user_data['phone']}\n\n"
              f"*Savol:* {question}",
         parse_mode="Markdown",
     )
@@ -81,7 +94,22 @@ async def send_question_to_group(update: Update, context: ContextTypes.DEFAULT_T
 
     # Foydalanuvchiga tasdiq yuborish
     await update.message.reply_text("Savolingiz guruhga yuborildi!")
-    return MENU
+    await update.message.reply_text("Endi, iltimos, CV'ingizni yuboring (faqat PDF formatda).")
+    return SEND_CV
+
+# CV yuborishni so'rash
+async def ask_for_cv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if update.message.document:
+        if update.message.document.mime_type == 'application/pdf':
+            # Handle the PDF file (you can save it or process it as needed)
+            await update.message.reply_text("CV qabul qilindi!")
+            return ConversationHandler.END
+        else:
+            await update.message.reply_text("Iltimos, faqat PDF formatda CV yuboring.")
+            return SEND_CV
+    else:
+        await update.message.reply_text("Iltimos, CV yuboring (faqat PDF formatda).")
+        return SEND_CV
 
 # Admin reply qilib foydalanuvchiga javob berish
 async def reply_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -111,10 +139,14 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 def main() -> None:
     application = Application.builder().token(BOT_TOKEN).build()
 
+    # Delete any existing webhook
+    application.bot.delete_webhook()
+
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
             NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
+            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone)],
             AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_age)],
             COURSE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_course)],
             FACULTY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_faculty)],
@@ -126,16 +158,19 @@ def main() -> None:
             ASK_QUESTION: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, send_question_to_group)
             ],
+            SEND_CV: [
+                MessageHandler(filters.DOCUMENT & filters.Regex(".*\.pdf$"), ask_for_cv),  # Wait for the CV (PDF only)
+            ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
-    # Reply handlerni qo'shish
+    # Add handlers
     application.add_handler(conv_handler)
     application.add_handler(MessageHandler(filters.ALL & filters.REPLY, reply_to_user))
 
-    # Botni ishga tushirish
-    application.run_polling()
+    # Run polling after clearing any existing webhooks
+    application.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
