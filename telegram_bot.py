@@ -140,7 +140,7 @@ def main() -> None:
     application = Application.builder().token(BOT_TOKEN).build()
 
     # Delete any existing webhook
-    application.bot.delete_webhook()
+    await application.bot.delete_webhook()  # Make sure to await this
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
@@ -159,7 +159,7 @@ def main() -> None:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, send_question_to_group)
             ],
             SEND_CV: [
-                MessageHandler(filters.DOCUMENT & filters.Regex(".*\.pdf$"), ask_for_cv),  # Wait for the CV (PDF only)
+                MessageHandler(filters.Document.MIME_TYPE("application/pdf"), ask_for_cv),  # PDF filter updated here
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
