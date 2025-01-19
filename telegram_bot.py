@@ -2,7 +2,7 @@ from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardR
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
 
 BOT_TOKEN = "7514443189:AAHXwgj871d9UWzPYgFRg2K7BDgQqAu9-zA"
-GROUP_CHAT_ID = -1234567890  # Replace with your group chat ID
+GROUP_CHAT_ID = -4648326817  # Replace with your group chat ID
 
 # States
 NAME, AGE, COURSE, FACULTY, MENU, ASK_QUESTION, CV = range(7)
