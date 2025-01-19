@@ -102,7 +102,7 @@ async def main():
             FACULTY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_faculty)],
             MENU: [MessageHandler(filters.Regex("^(Savol va takliflar yo'llash)$"), ask_question)],
             ASK_QUESTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, send_question_to_group)],
-            CV: [MessageHandler(filters.DOCUMENT, handle_cv)],  # Accept any document type
+            CV: [MessageHandler(filters.Document, handle_cv)],  # Accept any document type
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
