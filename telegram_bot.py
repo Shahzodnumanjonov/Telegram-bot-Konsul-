@@ -16,11 +16,11 @@ from telegram.ext import (
 )
 
 # Token va guruh ID
-BOT_TOKEN = "7514443189:AAHXwgj871d9UWzPYgFRg2K7BDgQqAu9-zA"  # O'zingizning tokeningizni kiriting
+BOT_TOKEN = "YOUR_BOT_TOKEN"  # O'zingizning tokeningizni kiriting
 GROUP_CHAT_ID = -4648326817  # Guruh ID
 
 # Holatlar
-NAME, AGE, COURSE, FACULTY, MENU, ASK_QUESTION = range(6)
+NAME, AGE, COURSE, FACULTY, MENU, ASK_QUESTION, PHONE = range(7)
 
 # Google Sheets API orqali ulanish
 def connect_to_google_sheets():
@@ -30,10 +30,10 @@ def connect_to_google_sheets():
     return client
 
 # Savolni Google Sheetsga saqlash
-def save_question_to_sheets(name, age, course, faculty, question):
+def save_question_to_sheets(name, age, course, faculty, question, phone):
     client = connect_to_google_sheets()
     sheet = client.open("Savollar").sheet1  # "Savollar" - siz yaratgan Google Sheetning nomi
-    sheet.append_row([name, age, course, faculty, question])
+    sheet.append_row([name, age, course, faculty, question, phone])
 
 # Start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -64,10 +64,18 @@ async def get_faculty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     keyboard = [
         [KeyboardButton("Savol va takliflar yo'llash")],
+        [KeyboardButton("Telefon raqamingizni yuboring", request_contact=True)],  # Telefon raqamini so'rash
     ]
     await update.message.reply_text(
         "Menyuni tanlang:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     )
+    return MENU
+
+# Telefon raqamini qabul qilish
+async def get_phone_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    # Telefon raqamini saqlash
+    context.user_data["phone"] = update.message.contact.phone_number
+    await update.message.reply_text("Telefon raqamingizni qabul qildik!")
     return MENU
 
 # Savolni qabul qilish va guruhga yuborish
@@ -87,7 +95,8 @@ async def send_question_to_group(update: Update, context: ContextTypes.DEFAULT_T
         context.user_data["age"],
         context.user_data["course"],
         context.user_data["faculty"],
-        question
+        question,
+        context.user_data.get("phone", "No phone")  # Telefon raqami bo'lmasa, 'No phone' yoziladi
     )
 
     # Guruhga foydalanuvchi ma'lumotlari bilan savolni yuborish
@@ -97,7 +106,8 @@ async def send_question_to_group(update: Update, context: ContextTypes.DEFAULT_T
              f"*Foydalanuvchi:* {context.user_data['name']} (@{user.username})\n"
              f"*Yoshi:* {context.user_data['age']}\n"
              f"*Kurs:* {context.user_data['course']}\n"
-             f"*Fakulteti:* {context.user_data['faculty']}\n\n"
+             f"*Fakulteti:* {context.user_data['faculty']}\n"
+             f"*Telefon raqam:* {context.user_data.get('phone', 'Noma')}\n\n"
              f"*Savol:* {question}",
         parse_mode="Markdown",
     )
@@ -147,7 +157,8 @@ def main() -> None:
             MENU: [
                 MessageHandler(
                     filters.Regex("^(Savol va takliflar yo'llash)$"), ask_question
-                )
+                ),
+                MessageHandler(filters.CONTACT, get_phone_number)  # Telefon raqamini olish
             ],
             ASK_QUESTION: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, send_question_to_group)
@@ -165,7 +176,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
