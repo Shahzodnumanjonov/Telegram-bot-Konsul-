@@ -17,7 +17,7 @@ BOT_TOKEN = "7514443189:AAHXwgj871d9UWzPYgFRg2K7BDgQqAu9-zA"  # Tokeningizni kir
 GROUP_CHAT_ID = -4648326817  # Guruh ID
 
 # Holatlar
-NAME, PHONE, AGE, COURSE, FACULTY, MENU, ASK_QUESTION, SEND_CV = range(8)
+NAME, AGE, COURSE, FACULTY, MENU, ASK_QUESTION, CV = range(7)
 
 # /start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -27,18 +27,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 # Ismni qabul qilish
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["name"] = update.message.text
-    keyboard = [
-        [KeyboardButton("📱 Share my number", request_contact=True)],
-    ]
-    await update.message.reply_text(
-        "Iltimos, telefon raqamingizni ulashing.",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True),
-    )
-    return PHONE
-
-# Telefon raqamini qabul qilish
-async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    context.user_data["phone"] = update.message.contact.phone_number if update.message.contact else update.message.text
     await update.message.reply_text("Yoshingiz nechida?")
     return AGE
 
@@ -83,8 +71,7 @@ async def send_question_to_group(update: Update, context: ContextTypes.DEFAULT_T
              f"*Foydalanuvchi:* {context.user_data['name']} (@{user.username})\n"
              f"*Yoshi:* {context.user_data['age']}\n"
              f"*Kurs:* {context.user_data['course']}\n"
-             f"*Fakulteti:* {context.user_data['faculty']}\n"
-             f"*Telefon:* {context.user_data['phone']}\n\n"
+             f"*Fakulteti:* {context.user_data['faculty']}\n\n"
              f"*Savol:* {question}",
         parse_mode="Markdown",
     )
@@ -94,23 +81,7 @@ async def send_question_to_group(update: Update, context: ContextTypes.DEFAULT_T
 
     # Foydalanuvchiga tasdiq yuborish
     await update.message.reply_text("Savolingiz guruhga yuborildi!")
-    await update.message.reply_text("Endi, iltimos, CV'ingizni yuboring (faqat PDF formatda).")
-    return SEND_CV
-
-# CV yuborishni so'rash
-async def ask_for_cv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    if update.message.document:
-        # Check if the MIME type is PDF
-        if update.message.document.mime_type == 'application/pdf':
-            # Handle the PDF file (you can save it or process it as needed)
-            await update.message.reply_text("CV qabul qilindi!")
-            return ConversationHandler.END
-        else:
-            await update.message.reply_text("Iltimos, faqat PDF formatda CV yuboring.")
-            return SEND_CV
-    else:
-        await update.message.reply_text("Iltimos, CV yuboring (faqat PDF formatda).")
-        return SEND_CV
+    return MENU
 
 # Admin reply qilib foydalanuvchiga javob berish
 async def reply_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -129,6 +100,30 @@ async def reply_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     else:
         await update.message.reply_text("Foydalanuvchiga reply qilib javob bering.")
 
+# CV yuborishni so'rash
+async def ask_for_cv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(
+        "Iltimos, CVingizni PDF formatda yuboring.\n(Format: PDF)"
+    )
+    return CV
+
+# CVni guruhga yuborish
+async def handle_cv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if update.message.document:
+        file = update.message.document
+        if file.mime_type == "application/pdf":
+            # Foydalanuvchidan kelgan PDFni guruhga yuborish
+            await context.bot.send_document(
+                chat_id=GROUP_CHAT_ID,
+                document=file.file_id,
+                caption=f"Yangi CV:\nFoydalanuvchi: {context.user_data['name']} (@{update.effective_user.username})"
+            )
+            await update.message.reply_text("CV guruhga yuborildi!")
+            return MENU
+        else:
+            await update.message.reply_text("Iltimos, faqat PDF formatidagi faylni yuboring.")
+    return CV
+
 # Bekor qilish komandasi
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
@@ -137,17 +132,13 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 # Asosiy funksiya
-async def main() -> None:
+async def main():
     application = Application.builder().token(BOT_TOKEN).build()
-
-    # Delete any existing webhook
-    await application.bot.delete_webhook()  # Ensure you await this here
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
             NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
-            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone)],
             AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_age)],
             COURSE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_course)],
             FACULTY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_faculty)],
@@ -159,27 +150,17 @@ async def main() -> None:
             ASK_QUESTION: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, send_question_to_group)
             ],
-            SEND_CV: [
-                MessageHandler(filters.Document.ALL, ask_for_cv),  # Check if a document is sent
-            ],
+            CV: [MessageHandler(filters.DOCUMENT, handle_cv)],  # Handle CV submission
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
-    # Add handlers
     application.add_handler(conv_handler)
     application.add_handler(MessageHandler(filters.ALL & filters.REPLY, reply_to_user))
 
-    # Run polling after clearing any existing webhooks
     await application.run_polling(drop_pending_updates=True)
 
-# Avoid using asyncio.run(main()) in environments where event loop is already running
-if __name__ == "__main__":
-    import sys
-    from asyncio import get_event_loop
-    loop = get_event_loop()
-    loop.run_until_complete(main())  # Run the bot without asyncio.run()
-
+# Run the bot
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(main())  # Ensure to run the main function as an async task
+    asyncio.run(main())
