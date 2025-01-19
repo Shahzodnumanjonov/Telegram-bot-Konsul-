@@ -173,6 +173,13 @@ async def main() -> None:
     # Run polling after clearing any existing webhooks
     await application.run_polling(drop_pending_updates=True)
 
+# Avoid using asyncio.run(main()) in environments where event loop is already running
+if __name__ == "__main__":
+    import sys
+    from asyncio import get_event_loop
+    loop = get_event_loop()
+    loop.run_until_complete(main())  # Run the bot without asyncio.run()
+
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())  # Ensure to run the main function as an async task
