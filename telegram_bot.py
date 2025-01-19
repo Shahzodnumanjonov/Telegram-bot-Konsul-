@@ -136,11 +136,11 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 # Asosiy funksiya
-def main() -> None:
+async def main() -> None:
     application = Application.builder().token(BOT_TOKEN).build()
 
     # Delete any existing webhook
-    await application.bot.delete_webhook()  # Make sure to await this
+    await application.bot.delete_webhook()  # Ensure you await this here
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
@@ -170,7 +170,8 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.ALL & filters.REPLY, reply_to_user))
 
     # Run polling after clearing any existing webhooks
-    application.run_polling(drop_pending_updates=True)
+    await application.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())  # Ensure to run the main function as an async task
