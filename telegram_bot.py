@@ -12,7 +12,6 @@ from telegram.ext import (
     ContextTypes,
     ConversationHandler,
 )
-
 # Bot tokeni va guruh ID
 BOT_TOKEN = "7514443189:AAHXwgj871d9UWzPYgFRg2K7BDgQqAu9-zA"  # Tokeningizni kiriting
 GROUP_CHAT_ID = -4648326817  # Guruh ID
