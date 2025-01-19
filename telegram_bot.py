@@ -100,6 +100,7 @@ async def send_question_to_group(update: Update, context: ContextTypes.DEFAULT_T
 # CV yuborishni so'rash
 async def ask_for_cv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.document:
+        # Check if the MIME type is PDF
         if update.message.document.mime_type == 'application/pdf':
             # Handle the PDF file (you can save it or process it as needed)
             await update.message.reply_text("CV qabul qilindi!")
@@ -159,7 +160,7 @@ async def main() -> None:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, send_question_to_group)
             ],
             SEND_CV: [
-                MessageHandler(filters.Document.MIME_TYPE("application/pdf"), ask_for_cv),  # PDF filter updated here
+                MessageHandler(filters.Document.ALL, ask_for_cv),  # Check if a document is sent
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
