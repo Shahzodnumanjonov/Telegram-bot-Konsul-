@@ -1,70 +1,44 @@
-from telegram import (
-    Update,
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-    ReplyKeyboardRemove,
-)
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    filters,
-    ContextTypes,
-    ConversationHandler,
-)
-# Bot tokeni va guruh ID
-BOT_TOKEN = "7514443189:AAHXwgj871d9UWzPYgFRg2K7BDgQqAu9-zA"  # Tokeningizni kiriting
-GROUP_CHAT_ID = -4648326817  # Guruh ID
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
 
-# Holatlar
+BOT_TOKEN = "your_bot_token_here"
+GROUP_CHAT_ID = -1234567890  # Replace with your group chat ID
+
+# States
 NAME, AGE, COURSE, FACULTY, MENU, ASK_QUESTION, CV = range(7)
 
-# /start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Ismingizni bilsam bo'ladimi?")
     return NAME
 
-# Ismni qabul qilish
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["name"] = update.message.text
     await update.message.reply_text("Yoshingiz nechida?")
     return AGE
 
-# Yoshni qabul qilish
 async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["age"] = update.message.text
     await update.message.reply_text("Nechinchi kurssiz?")
     return COURSE
 
-# Kursni qabul qilish
 async def get_course(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["course"] = update.message.text
     await update.message.reply_text("Qaysi fakultetda tahsil olasiz?")
     return FACULTY
 
-# Fakultetni qabul qilish va menyuni ko'rsatish
 async def get_faculty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["faculty"] = update.message.text
-
-    keyboard = [
-        [KeyboardButton("Savol va takliflar yo'llash")],
-    ]
-    await update.message.reply_text(
-        "Menyuni tanlang:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    )
+    keyboard = [[KeyboardButton("Savol va takliflar yo'llash")]]
+    await update.message.reply_text("Menyuni tanlang:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
     return MENU
 
-# Savolni qabul qilish va guruhga yuborish
 async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Savolingizni yozing:", reply_markup=ReplyKeyboardRemove())
     return ASK_QUESTION
 
-# Savolni guruhga jo'natish
 async def send_question_to_group(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     question = update.message.text
-
-    # Guruhga foydalanuvchi ma'lumotlari bilan savolni yuborish
     forwarded_message = await context.bot.send_message(
         chat_id=GROUP_CHAT_ID,
         text=f"Yangi savol kelib tushdi:\n\n"
@@ -75,20 +49,13 @@ async def send_question_to_group(update: Update, context: ContextTypes.DEFAULT_T
              f"*Savol:* {question}",
         parse_mode="Markdown",
     )
-
-    # Xabar ID va foydalanuvchi IDni saqlash
     context.bot_data[forwarded_message.message_id] = user.id
-
-    # Foydalanuvchiga tasdiq yuborish
     await update.message.reply_text("Savolingiz guruhga yuborildi!")
     return MENU
 
-# Admin reply qilib foydalanuvchiga javob berish
 async def reply_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message.reply_to_message:
         original_message_id = update.message.reply_to_message.message_id
-
-        # Reply qilingan xabardan foydalanuvchi IDni olish
         user_id = context.bot_data.get(original_message_id)
         if user_id:
             await context.bot.send_message(
@@ -100,19 +67,14 @@ async def reply_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     else:
         await update.message.reply_text("Foydalanuvchiga reply qilib javob bering.")
 
-# CV yuborishni so'rash
 async def ask_for_cv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text(
-        "Iltimos, CVingizni PDF formatda yuboring.\n(Format: PDF)"
-    )
+    await update.message.reply_text("Iltimos, CVingizni PDF formatda yuboring.\n(Format: PDF)")
     return CV
 
-# CVni guruhga yuborish
 async def handle_cv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.document:
         file = update.message.document
         if file.mime_type == "application/pdf":
-            # Foydalanuvchidan kelgan PDFni guruhga yuborish
             await context.bot.send_document(
                 chat_id=GROUP_CHAT_ID,
                 document=file.file_id,
@@ -124,14 +86,10 @@ async def handle_cv(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             await update.message.reply_text("Iltimos, faqat PDF formatidagi faylni yuboring.")
     return CV
 
-# Bekor qilish komandasi
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text(
-        "Jarayon bekor qilindi.", reply_markup=ReplyKeyboardRemove()
-    )
+    await update.message.reply_text("Jarayon bekor qilindi.", reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
-# Asosiy funksiya
 async def main():
     application = Application.builder().token(BOT_TOKEN).build()
 
@@ -142,15 +100,9 @@ async def main():
             AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_age)],
             COURSE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_course)],
             FACULTY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_faculty)],
-            MENU: [
-                MessageHandler(
-                    filters.Regex("^(Savol va takliflar yo'llash)$"), ask_question
-                )
-            ],
-            ASK_QUESTION: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, send_question_to_group)
-            ],
-            CV: [MessageHandler(filters.DOCUMENT, handle_cv)],  # Handle CV submission
+            MENU: [MessageHandler(filters.Regex("^(Savol va takliflar yo'llash)$"), ask_question)],
+            ASK_QUESTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, send_question_to_group)],
+            CV: [MessageHandler(filters.MIME_TYPE("application/pdf"), handle_cv)],  # Correct MIME type filter
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
@@ -160,7 +112,6 @@ async def main():
 
     await application.run_polling(drop_pending_updates=True)
 
-# Run the bot
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
