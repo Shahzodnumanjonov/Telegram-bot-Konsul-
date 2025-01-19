@@ -16,7 +16,7 @@ from telegram.ext import (
 )
 
 # Token va guruh ID
-BOT_TOKEN = "7514443189:AAHsq44wex0bDf37U8q4KnD2vpmDxbZoWtk"  # O'zingizning tokeningizni kiriting
+BOT_TOKEN = "7514443189:AAHXwgj871d9UWzPYgFRg2K7BDgQqAu9-zA"  # O'zingizning tokeningizni kiriting
 GROUP_CHAT_ID = -4648326817  # Guruh ID
 
 # Holatlar
