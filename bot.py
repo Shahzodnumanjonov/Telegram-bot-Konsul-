@@ -1,3 +1,5 @@
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 from telegram import (
     Update,
     ReplyKeyboardMarkup,
@@ -14,11 +16,24 @@ from telegram.ext import (
 )
 
 # Token va guruh ID
-BOT_TOKEN = "7514443189:AAHsq44wex0bDf37U8q4KnD2vpmDxbZoWtk"
-GROUP_CHAT_ID = -4648326817
+BOT_TOKEN = "7514443189:AAHsq44wex0bDf37U8q4KnD2vpmDxbZoWtk"  # O'zingizning tokeningizni kiriting
+GROUP_CHAT_ID = -4648326817  # Guruh ID
 
 # Holatlar
 NAME, AGE, COURSE, FACULTY, MENU, ASK_QUESTION = range(6)
+
+# Google Sheets API orqali ulanish
+def connect_to_google_sheets():
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = ServiceAccountCredentials.from_json_keyfile_name("path_to_your_credentials.json", scope)
+    client = gspread.authorize(creds)
+    return client
+
+# Savolni Google Sheetsga saqlash
+def save_question_to_sheets(name, age, course, faculty, question):
+    client = connect_to_google_sheets()
+    sheet = client.open("Savollar").sheet1  # "Savollar" - siz yaratgan Google Sheetning nomi
+    sheet.append_row([name, age, course, faculty, question])
 
 # Start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -61,10 +76,19 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     await update.message.reply_text("Savolingizni yozing:", reply_markup=ReplyKeyboardRemove())
     return ASK_QUESTION
 
-# Savolni guruhga jo'natish
+# Savolni guruhga jo'natish va saqlash
 async def send_question_to_group(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     question = update.message.text
+
+    # Google Sheetsga saqlash
+    save_question_to_sheets(
+        context.user_data["name"],
+        context.user_data["age"],
+        context.user_data["course"],
+        context.user_data["faculty"],
+        question
+    )
 
     # Guruhga foydalanuvchi ma'lumotlari bilan savolni yuborish
     forwarded_message = await context.bot.send_message(
